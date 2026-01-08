@@ -18,7 +18,7 @@ const INITIAL_HABITS: Habit[] = [
   { id: 'h2', title: 'Ăn hết phần rau', icon: '🥦', assignedTo: ['k1', 'k2'], period: 'afternoon', order: 0 },
   { id: 'h4', title: 'Hoàn thành nhiệm vụ trước khi ngủ', icon: '📝', assignedTo: ['k1', 'k2'], period: 'evening', order: 0 },
   { id: 'h3', title: 'Đi ngủ trước 9h', icon: '😴', assignedTo: ['k1', 'k2'], period: 'evening', order: 1 },
-  { id: 'h6', title: 'Không xem iPad và ti vi quá giờ', icon: '📵', assignedTo: ['k1', 'k2'], period: 'evening', order: 2 },
+  { id: 'h6', title: 'Không xem iPad và ti vi quá 1H giờ', icon: '📵', assignedTo: ['k1', 'k2'], period: 'evening', order: 2 },
 ];
 
 function App() {
