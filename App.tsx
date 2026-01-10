@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Wand2, PartyPopper, Calendar as CalendarIcon, History, X, Trophy } from 'lucide-react';
+import { Plus, Wand2, PartyPopper, Calendar as CalendarIcon, History, X, Trophy, AlertTriangle } from 'lucide-react';
 import KidCard from './components/KidCard';
 import HabitList from './components/HabitList';
 import StatsChart from './components/StatsChart';
@@ -66,8 +66,16 @@ function App() {
 
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [isStatsView, setIsStatsView] = useState(false);
+  
+  // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRewardModal, setShowRewardModal] = useState<{kid: Kid, suggestions: RewardSuggestion[]} | null>(null);
+  
+  // Penalty State
+  const [showPenaltyModal, setShowPenaltyModal] = useState<Kid | null>(null);
+  const [penaltyReason, setPenaltyReason] = useState('');
+  const [penaltyPoints, setPenaltyPoints] = useState(5);
+
   const [isGenerating, setIsGenerating] = useState(false);
 
   // New Habit State
@@ -100,6 +108,12 @@ function App() {
   }, [logs]);
 
   // --- Helpers ---
+  
+  // Filter habits that apply to the current date (either specific date or recurring)
+  const getHabitsForCurrentDate = () => {
+    return habits.filter(h => !h.date || h.date === currentDate);
+  };
+
   const getTodayCompletedHabitIds = (kidId: string) => {
     return new Set(
       logs
@@ -160,9 +174,13 @@ function App() {
   };
 
   const handleMoveHabit = (kidId: string, habit: Habit, direction: 'up' | 'down') => {
-    // We only reorder within the context of the current kid and period
+    // We only reorder within the context of the current kid, period, AND date visibility
     const relevantHabits = habits
-      .filter(h => h.assignedTo.includes(kidId) && h.period === habit.period)
+      .filter(h => 
+        h.assignedTo.includes(kidId) && 
+        h.period === habit.period &&
+        (!h.date || h.date === currentDate)
+      )
       .sort((a, b) => a.order - b.order);
 
     const currentIndex = relevantHabits.findIndex(h => h.id === habit.id);
@@ -199,7 +217,8 @@ function App() {
       icon: newHabitIcon,
       assignedTo,
       period: newHabitPeriod,
-      order: maxOrder + 1
+      order: maxOrder + 1,
+      date: currentDate // STRICTLY BIND TO CURRENT DATE
     };
 
     setHabits([...habits, newHabit]);
@@ -246,7 +265,27 @@ function App() {
     setShowRewardModal(null);
   };
 
+  // Penalty Logic
+  const handleOpenPenaltyModal = (kid: Kid) => {
+    setPenaltyPoints(5);
+    setPenaltyReason('');
+    setShowPenaltyModal(kid);
+  };
+
+  const handleConfirmPenalty = () => {
+    if (!showPenaltyModal) return;
+    
+    setKids(kids.map(k => 
+      k.id === showPenaltyModal.id
+      ? { ...k, currentScore: Math.max(0, k.currentScore - penaltyPoints) }
+      : k
+    ));
+    setShowPenaltyModal(null);
+  };
+
   // --- Render ---
+
+  const visibleHabits = getHabitsForCurrentDate();
 
   return (
     <div className="min-h-screen pb-20">
@@ -290,6 +329,7 @@ function App() {
                 kid={kid} 
                 onRedeem={handleRedeemReward}
                 onUpdateKid={handleUpdateKid}
+                onPenalty={handleOpenPenaltyModal}
               />
             ))}
           </div>
@@ -307,13 +347,13 @@ function App() {
                     Hoạt động của {kid.name}
                   </h3>
                   <span className="text-xs font-semibold bg-white px-2 py-1 rounded-md shadow-sm text-gray-500">
-                    {getTodayCompletedHabitIds(kid.id).size}/{habits.filter(h => h.assignedTo.includes(kid.id)).length} hoàn thành
+                    {getTodayCompletedHabitIds(kid.id).size}/{visibleHabits.filter(h => h.assignedTo.includes(kid.id)).length} hoàn thành
                   </span>
                 </div>
                 
                 <HabitList 
                   kid={kid}
-                  habits={habits}
+                  habits={visibleHabits}
                   completedHabitIds={getTodayCompletedHabitIds(kid.id)}
                   onToggleHabit={(habitId) => handleToggleHabit(kid.id, habitId)}
                   onDeleteHabit={handleDeleteHabit}
@@ -348,6 +388,11 @@ function App() {
             </div>
             
             <div className="p-6 space-y-4 overflow-y-auto">
+              <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700 border border-blue-100 flex items-start gap-2">
+                 <CalendarIcon size={16} className="mt-0.5 shrink-0"/>
+                 <span>Hoạt động này sẽ chỉ được thêm vào ngày <b>{new Date(currentDate).toLocaleDateString('vi-VN')}</b>.</span>
+              </div>
+
               {/* AI Suggestion Section */}
               <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                 <div className="flex justify-between items-center mb-3">
@@ -443,6 +488,75 @@ function App() {
                 className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition-colors"
               >
                 Thêm Mới
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Penalty Modal */}
+      {showPenaltyModal && (
+        <div className="fixed inset-0 bg-red-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden text-center">
+            <div className="bg-red-500 p-6 text-white">
+              <AlertTriangle size={48} className="mx-auto mb-2 opacity-90" />
+              <h3 className="text-xl font-bold">Trừ điểm vi phạm</h3>
+              <p className="text-red-100">{showPenaltyModal.name}</p>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Lý do vi phạm</label>
+                <input 
+                  type="text" 
+                  value={penaltyReason}
+                  onChange={(e) => setPenaltyReason(e.target.value)}
+                  placeholder="Ví dụ: Không nghe lời, Đánh nhau..."
+                  className="w-full border-red-200 rounded-xl shadow-sm focus:border-red-500 focus:ring-red-500 px-4 py-2 bg-red-50"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 text-left">Số điểm phạt</label>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2 justify-center">
+                    {[5, 10, 20].map(points => (
+                      <button
+                        key={points}
+                        onClick={() => setPenaltyPoints(points)}
+                        className={`flex-1 py-2 rounded-xl font-bold transition-all ${penaltyPoints === points ? 'bg-red-500 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-red-100'}`}
+                      >
+                        -{points}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      value={penaltyPoints}
+                      onChange={(e) => setPenaltyPoints(Number(e.target.value))}
+                      className="w-full border-red-200 rounded-xl shadow-sm focus:border-red-500 focus:ring-red-500 pl-4 pr-4 py-2 bg-red-50 text-center font-bold text-red-600 text-lg"
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-red-400 font-bold">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-100 flex gap-3 bg-gray-50">
+              <button 
+                onClick={() => setShowPenaltyModal(null)}
+                className="flex-1 py-3 text-gray-500 font-semibold hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Bỏ qua
+              </button>
+              <button 
+                onClick={handleConfirmPenalty}
+                className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl shadow-lg hover:bg-red-600 transition-colors"
+              >
+                Xác nhận phạt
               </button>
             </div>
           </div>

@@ -1,14 +1,15 @@
 import React, { useRef } from 'react';
-import { Trophy, Gift, Camera } from 'lucide-react';
+import { Trophy, Gift, Camera, Frown } from 'lucide-react';
 import { Kid } from '../types';
 
 interface KidCardProps {
   kid: Kid;
   onRedeem: (kid: Kid) => void;
   onUpdateKid: (updatedKid: Kid) => void;
+  onPenalty: (kid: Kid) => void;
 }
 
-const KidCard: React.FC<KidCardProps> = ({ kid, onRedeem, onUpdateKid }) => {
+const KidCard: React.FC<KidCardProps> = ({ kid, onRedeem, onUpdateKid, onPenalty }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const progress = Math.min((kid.currentScore / 100) * 100, 100);
   const canRedeem = kid.currentScore >= 100;
@@ -79,7 +80,7 @@ const KidCard: React.FC<KidCardProps> = ({ kid, onRedeem, onUpdateKid }) => {
         <Trophy size={16} className="text-yellow-500" />
         <span>{kid.currentScore} điểm</span>
       </div>
-      
+
       <div className="relative group">
         <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md mb-4 bg-white">
           <img src={kid.avatar} alt={kid.name} className="w-full h-full object-cover" />
@@ -97,7 +98,7 @@ const KidCard: React.FC<KidCardProps> = ({ kid, onRedeem, onUpdateKid }) => {
           className="hidden" 
           accept="image/*"
           onChange={handleFileChange}
-          onClick={(e) => (e.currentTarget.value = '')} // Reset để có thể chọn lại cùng 1 file
+          onClick={(e) => (e.currentTarget.value = '')} 
         />
       </div>
 
@@ -112,17 +113,30 @@ const KidCard: React.FC<KidCardProps> = ({ kid, onRedeem, onUpdateKid }) => {
         </div>
       </div>
 
-      {canRedeem ? (
-        <button 
-          onClick={() => onRedeem(kid)}
-          className="animate-bounce bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:from-yellow-500 hover:to-orange-600 flex items-center gap-2 transform active:scale-95 transition-all"
+      <div className="flex items-center gap-3 mt-auto">
+         <button 
+          onClick={() => onPenalty(kid)}
+          className="bg-white border-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-400 font-bold py-2 px-3 rounded-xl shadow-sm flex items-center gap-1 transition-all active:scale-95"
+          title="Trừ điểm vi phạm"
         >
-          <Gift size={20} />
-          Đổi Quà Ngay!
+          <Frown size={18} />
+          <span className="text-sm">Vi phạm</span>
         </button>
-      ) : (
-        <p className="text-sm opacity-70 font-medium">Cố lên! Còn {100 - kid.currentScore} điểm nữa thôi!</p>
-      )}
+
+        {canRedeem ? (
+          <button 
+            onClick={() => onRedeem(kid)}
+            className="animate-bounce bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-2 px-6 rounded-xl shadow-lg hover:from-yellow-500 hover:to-orange-600 flex items-center gap-2 transform active:scale-95 transition-all"
+          >
+            <Gift size={20} />
+            Đổi Quà!
+          </button>
+        ) : (
+          <div className="bg-white/50 px-4 py-2 rounded-xl text-sm font-semibold opacity-70">
+            Còn {100 - kid.currentScore} điểm
+          </div>
+        )}
+      </div>
     </div>
   );
 };

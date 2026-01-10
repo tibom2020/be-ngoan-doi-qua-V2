@@ -16,6 +16,7 @@ export interface Habit {
   assignedTo: string[]; // Array of Kid IDs
   period: HabitPeriod;
   order: number;
+  date?: string; // Optional: YYYY-MM-DD. If present, only applies to this date. If undefined, applies every day.
 }
 
 // A record of a completed habit
