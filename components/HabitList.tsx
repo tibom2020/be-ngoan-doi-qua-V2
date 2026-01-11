@@ -53,6 +53,7 @@ const HabitList: React.FC<HabitListProps> = ({
             const isCompleted = completedHabitIds.has(habit.id);
             const isFirst = index === 0;
             const isLast = index === sortedHabits.length - 1;
+            const points = habit.points || 1;
             
             return (
               <div 
@@ -70,7 +71,11 @@ const HabitList: React.FC<HabitListProps> = ({
                     <span className={`font-bold text-gray-800 transition-all ${isCompleted ? 'line-through text-gray-400' : ''}`}>
                       {habit.title}
                     </span>
-                    {isCompleted && <span className="text-xs text-green-600 font-bold">Đã xong! +1 điểm</span>}
+                    {isCompleted ? (
+                      <span className="text-xs text-green-600 font-bold">Đã xong! +{points} điểm</span>
+                    ) : (
+                      <span className="text-xs text-gray-400 font-medium">+{points} điểm</span>
+                    )}
                   </div>
                 </div>
 

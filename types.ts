@@ -17,6 +17,7 @@ export interface Habit {
   period: HabitPeriod;
   order: number;
   date?: string; // Optional: YYYY-MM-DD. If present, only applies to this date. If undefined, applies every day.
+  points?: number; // Points awarded when completed. Defaults to 1.
 }
 
 // A record of a completed habit

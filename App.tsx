@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Wand2, PartyPopper, Calendar as CalendarIcon, History, X, Trophy, AlertTriangle } from 'lucide-react';
+import { Plus, Wand2, PartyPopper, Calendar as CalendarIcon, History, X, Trophy, AlertTriangle, Star } from 'lucide-react';
 import KidCard from './components/KidCard';
 import HabitList from './components/HabitList';
 import StatsChart from './components/StatsChart';
@@ -8,17 +8,17 @@ import { suggestActivities, suggestRewards } from './services/geminiService';
 
 // Initial Data
 const INITIAL_KIDS: Kid[] = [
-  { id: 'k1', name: 'Tí Nị', avatar: 'https://picsum.photos/id/64/200/200', themeColor: 'pink', currentScore: 0, redeemedPoints: 0 },
-  { id: 'k2', name: 'Bơm', avatar: 'https://picsum.photos/id/237/200/200', themeColor: 'blue', currentScore: 0, redeemedPoints: 0 },
+  { id: 'k1', name: 'Bé Nị thích trà sữa', avatar: 'https://picsum.photos/id/64/200/200', themeColor: 'pink', currentScore: 0, redeemedPoints: 0 },
+  { id: 'k2', name: 'Bơm thích xe đua 3F1', avatar: 'https://picsum.photos/id/237/200/200', themeColor: 'blue', currentScore: 0, redeemedPoints: 0 },
 ];
 
 const INITIAL_HABITS: Habit[] = [
-  { id: 'h5', title: 'Thức dậy đúng giờ', icon: '⏰', assignedTo: ['k1', 'k2'], period: 'morning', order: 0 },
-  { id: 'h1', title: 'Đánh răng buổi sáng', icon: '🦷', assignedTo: ['k1', 'k2'], period: 'morning', order: 1 },
-  { id: 'h2', title: 'Ăn hết phần rau', icon: '🥦', assignedTo: ['k1', 'k2'], period: 'afternoon', order: 0 },
-  { id: 'h4', title: 'Hoàn thành nhiệm vụ trước khi ngủ', icon: '📝', assignedTo: ['k1', 'k2'], period: 'evening', order: 0 },
-  { id: 'h3', title: 'Đi ngủ trước 9h', icon: '😴', assignedTo: ['k1', 'k2'], period: 'evening', order: 1 },
-  { id: 'h6', title: 'Không xem iPad và ti vi quá 1H giờ', icon: '📵', assignedTo: ['k1', 'k2'], period: 'evening', order: 2 },
+  { id: 'h5', title: 'Thức dậy đúng giờ', icon: '⏰', assignedTo: ['k1', 'k2'], period: 'morning', order: 0, points: 1 },
+  { id: 'h1', title: 'Đánh răng buổi sáng', icon: '🦷', assignedTo: ['k1', 'k2'], period: 'morning', order: 1, points: 1 },
+  { id: 'h2', title: 'Ăn hết phần rau', icon: '🥦', assignedTo: ['k1', 'k2'], period: 'afternoon', order: 0, points: 2 },
+  { id: 'h4', title: 'Hoàn thành nhiệm vụ trước khi ngủ', icon: '📝', assignedTo: ['k1', 'k2'], period: 'evening', order: 0, points: 2 },
+  { id: 'h3', title: 'Đi ngủ trước 9h', icon: '😴', assignedTo: ['k1', 'k2'], period: 'evening', order: 1, points: 3 },
+  { id: 'h6', title: 'Không xem iPad và ti vi quá 1H giờ', icon: '📵', assignedTo: ['k1', 'k2'], period: 'evening', order: 2, points: 5 },
 ];
 
 function App() {
@@ -48,7 +48,8 @@ function App() {
       return parsed.map((h, index) => ({
         ...h, 
         period: h.period || 'morning',
-        order: h.order !== undefined ? h.order : index
+        order: h.order !== undefined ? h.order : index,
+        points: h.points || 1 // Default point value migration
       }));
     } catch (e) {
       return INITIAL_HABITS;
@@ -83,6 +84,7 @@ function App() {
   const [newHabitIcon, setNewHabitIcon] = useState('🌟');
   const [newHabitAssignee, setNewHabitAssignee] = useState<string>('all');
   const [newHabitPeriod, setNewHabitPeriod] = useState<HabitPeriod>('morning');
+  const [newHabitPoints, setNewHabitPoints] = useState<number>(1);
   const [aiSuggestions, setAiSuggestions] = useState<ActivitySuggestion[]>([]);
 
   // --- Effects ---
@@ -131,13 +133,16 @@ function App() {
       l => l.date === currentDate && l.kidId === kidId && l.habitId === habitId
     );
 
+    const habit = habits.find(h => h.id === habitId);
+    const points = habit?.points || 1;
+
     let newLogs = [...logs];
     let scoreDelta = 0;
 
     if (existingLogIndex >= 0) {
       // Uncheck: Remove log, decrease score
       newLogs.splice(existingLogIndex, 1);
-      scoreDelta = -1;
+      scoreDelta = -points;
     } else {
       // Check: Add log, increase score
       newLogs.push({
@@ -147,7 +152,7 @@ function App() {
         habitId,
         timestamp: Date.now(),
       });
-      scoreDelta = 1;
+      scoreDelta = points;
     }
 
     setLogs(newLogs);
@@ -218,11 +223,13 @@ function App() {
       assignedTo,
       period: newHabitPeriod,
       order: maxOrder + 1,
-      date: currentDate // STRICTLY BIND TO CURRENT DATE
+      date: currentDate, // STRICTLY BIND TO CURRENT DATE
+      points: newHabitPoints
     };
 
     setHabits([...habits, newHabit]);
     setNewHabitTitle('');
+    setNewHabitPoints(1); // Reset points
     setShowAddModal(false);
   };
 
@@ -437,16 +444,30 @@ function App() {
                 </div>
                 
                 <div className="flex gap-4">
-                  <div className="w-1/3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Biểu tượng</label>
+                  <div className="w-1/4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Icon</label>
                     <input 
                       type="text" 
                       value={newHabitIcon}
                       onChange={(e) => setNewHabitIcon(e.target.value)}
-                      className="w-full border-gray-300 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-4 py-2 bg-gray-50 text-center text-2xl"
+                      className="w-full border-gray-300 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-2 py-2 bg-gray-50 text-center text-2xl"
                     />
                   </div>
-                  <div className="w-2/3">
+                   <div className="w-1/4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Điểm</label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        min="1"
+                        max="100"
+                        value={newHabitPoints}
+                        onChange={(e) => setNewHabitPoints(Number(e.target.value))}
+                        className="w-full border-gray-300 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-2 py-2 pl-7 bg-gray-50 font-bold text-gray-800"
+                      />
+                      <Star size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-yellow-500 fill-yellow-500" />
+                    </div>
+                  </div>
+                  <div className="w-2/4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Thời gian</label>
                     <select 
                       value={newHabitPeriod}
